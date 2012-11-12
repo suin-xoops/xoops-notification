@@ -1,3 +1,14 @@
 .DS_Store
 /.idea
 .phpmake
+/vendor
+/composer.json
+/composer.lock
+/dbunit
+/phpcov
+/phpcpd
+/phpdcd
+/phploc
+/phpunit
+/phpunit-skelgen
+/Coverage
