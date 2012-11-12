@@ -51,12 +51,12 @@ class NotificationRepository extends RepositoryBase
 	{
 		if ( $notification->getId() === null ) {
 			$statement  = "INSERT INTO %prefix%notification ";
-			$statement .= "(id, from_user_id, to_user_id, message, link, read, module_id, created) ";
+			$statement .= "(id, from_user_id, to_user_id, message, link, `read`, module_id, created) ";
 			$statement .= "VALUES (:id, :from_user_id, :to_user_id, :message, :link, :read, :module_id, :created)";
 		} else {
 			$statement  = 'UPDATE %prefix%notification ';
-			$statement .= 'from_user_id = :from_user_id, to_user_id = :to_user_id, message = :message, ';
-			$statement .= 'link = :link, read = :read, module_id = :module_id, created = :created';
+			$statement .= 'SET from_user_id = :from_user_id, to_user_id = :to_user_id, message = :message, ';
+			$statement .= 'link = :link, `read` = :read, module_id = :module_id, created = :created ';
 			$statement .= 'WHERE id = :id';
 		}
 
@@ -78,6 +78,21 @@ class NotificationRepository extends RepositoryBase
 	}
 
 	/**
+	 * Find by ID
+	 * @param int $id
+	 * @return Notification
+	 */
+	public function find($id)
+	{
+		$query = 'SELECT * FROM %prefix%notification WHERE id = :id';
+		$query = new Query($query, $this->prefix);
+		$query->bind(array(':id' => $id));
+		$result = $this->database->query($query->toString());
+		$notifications = $this->_constructNotificationsByQueryResult($result);
+		return $notifications[0];
+	}
+
+	/**
 	 * Find unread notifications by user
 	 * @param int $userId
 	 * @param int $limit
@@ -86,7 +101,7 @@ class NotificationRepository extends RepositoryBase
 	 */
 	public function findUnreadByUser($userId, $limit = 0, $start = 0)
 	{
-		$query = 'SELECT * FROM %prefix%notification WHERE to_user_id = :to_user_id AND read = 0 ORDER BY created DESC';
+		$query = 'SELECT * FROM %prefix%notification WHERE to_user_id = :to_user_id AND `read` = 0 ORDER BY created DESC';
 		$query = new Query($query, $this->prefix);
 		$query->bind(array(':to_user_id' => $userId));
 		$result = $this->database->query($query->toString(), $limit, $start);
@@ -94,6 +109,7 @@ class NotificationRepository extends RepositoryBase
 	}
 
 	/**
+	 * Find notifications by user
 	 * @param int $userId
 	 * @param int $limit
 	 * @param int $start
@@ -106,6 +122,21 @@ class NotificationRepository extends RepositoryBase
 		$query->bind(array(':to_user_id' => $userId));
 		$result = $this->database->query($query->toString(), $limit, $start);
 		return $this->_constructNotificationsByQueryResult($result);
+	}
+
+	/**
+	 * Count notifications by user
+	 * @param int $userId
+	 * @return int
+	 */
+	public function countByUser($userId)
+	{
+		$query = 'SELECT COUNT(*) AS total FROM %prefix%notification WHERE to_user_id = :to_user_id ORDER BY created DESC';
+		$query = new Query($query, $this->prefix);
+		$query->bind(array(':to_user_id' => $userId));
+		$result = $this->database->query($query->toString());
+		$row    = $this->database->fetchArray($result);
+		return intval($row['total']);
 	}
 
 	/**
@@ -129,6 +160,13 @@ class NotificationRepository extends RepositoryBase
 				->setLink($row['link'])
 				->setModule($this->moduleRepository->get($row['module_id']))
 				->setCreated($created);
+
+			if ( $row['read'] == 1 ) {
+				$notification->setRead();
+			} else {
+				$notification->setUnread();
+			}
+
 			$notifications[] = $notification;
 		}
 

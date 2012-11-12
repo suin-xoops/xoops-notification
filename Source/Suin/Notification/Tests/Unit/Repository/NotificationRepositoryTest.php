@@ -88,7 +88,7 @@ class NotificationRepositoryTest extends \PHPUnit_Framework_TestCase
 		));
 
 		$expectedQuery  = 'INSERT INTO xoops_notification_notification ';
-		$expectedQuery .= '(id, from_user_id, to_user_id, message, link, read, module_id, created) ';
+		$expectedQuery .= '(id, from_user_id, to_user_id, message, link, `read`, module_id, created) ';
 		$expectedQuery .= 'VALUES (NULL, 1234, 9876, "message", "/link/to/page", 1, 11, 13579)';
 
 		$database = $this->getMock('XoopsDatabase', array('queryF'));
@@ -126,8 +126,8 @@ class NotificationRepositoryTest extends \PHPUnit_Framework_TestCase
 		));
 
 		$expectedQuery  = 'UPDATE xoops_notification_notification ';
-		$expectedQuery .= 'from_user_id = 1234, to_user_id = 9876, message = "message", ';
-		$expectedQuery .= 'link = "/link/to/page", read = 0, module_id = 11, created = 13579';
+		$expectedQuery .= 'SET from_user_id = 1234, to_user_id = 9876, message = "message", ';
+		$expectedQuery .= 'link = "/link/to/page", `read` = 0, module_id = 11, created = 13579 ';
 		$expectedQuery .= 'WHERE id = 123';
 
 		$database = $this->getMock('XoopsDatabase', array('queryF'));
@@ -174,7 +174,7 @@ class NotificationRepositoryTest extends \PHPUnit_Framework_TestCase
 				'to_user_id'   => 1234,
 				'message'      => 'Message 2',
 				'link'         => '/link/to/page/2',
-				'read'         => 0,
+				'read'         => 1,
 				'module_id'    => 10,
 				'created'      => 1234567890,
 			),
@@ -183,7 +183,7 @@ class NotificationRepositoryTest extends \PHPUnit_Framework_TestCase
 
 		// behavior expectation
 		$pointer = ':pointer';
-		$query = 'SELECT * FROM xoops_notification_notification WHERE to_user_id = 1234 AND read = 0 ORDER BY created DESC';
+		$query = 'SELECT * FROM xoops_notification_notification WHERE to_user_id = 1234 AND `read` = 0 ORDER BY created DESC';
 		$database->expects($this->at(0))->method('query')->with($query)->will($this->returnValue($pointer));
 		$database->expects($this->at(1))->method('fetchArray')->with($pointer)->will($this->returnValue($rows[0]));
 		$database->expects($this->at(2))->method('fetchArray')->with($pointer)->will($this->returnValue($rows[1]));
@@ -211,9 +211,16 @@ class NotificationRepositoryTest extends \PHPUnit_Framework_TestCase
 		$this->assertSame($to, $firstNotification->getTo());
 		$this->assertSame('Message 1', $firstNotification->getMessage());
 		$this->assertSame('/link/to/page/1', $firstNotification->getLink());
+		$this->assertFalse($firstNotification->hasBeenRead());
 		$this->assertSame($module, $firstNotification->getModule());
 		$this->assertTrue($firstNotification->getCreated() instanceof \DateTime);
 		$this->assertSame(1234567890, $firstNotification->getCreated()->getTimestamp());
+
+		/** @var $secondNotification Notification */
+		$secondNotification = next($notifications);
+		$this->assertTrue($firstNotification instanceof Notification);
+		$this->assertSame(101, $secondNotification->getId());
+		$this->assertTrue($secondNotification->hasBeenRead());
 	}
 
 	public function testFindByUser()
@@ -235,5 +242,29 @@ class NotificationRepositoryTest extends \PHPUnit_Framework_TestCase
 
 		$notifications = $repository->findByUser(123);
 		$this->assertInternalType('array', $notifications);
+	}
+
+	public function testCountByUser()
+	{
+		// dependency injection
+		$database = $this->getMock('XoopsDatabase', array('query', 'fetchArray'));
+		$userRepository = $this->getUserRepository();
+		$moduleRepository = $this->getModuleRepository();
+
+		$repository = new NotificationRepository();
+		$repository->setDatabase($database);
+		$repository->setPrefix('xoops_notification_');
+		$repository->setUserRepository($userRepository);
+		$repository->setModuleRepository($moduleRepository);
+
+		// behavior expectation
+		$query = 'SELECT COUNT(*) AS total FROM xoops_notification_notification WHERE to_user_id = 123 ORDER BY created DESC';
+		$database->expects($this->at(0))->method('query')->with($query);
+		$database->expects($this->at(1))->method('fetchArray')->will($this->returnValue(array(
+			'total' => 24,
+		)));
+
+		$total = $repository->countByUser(123);
+		$this->assertSame(24, $total);
 	}
 }

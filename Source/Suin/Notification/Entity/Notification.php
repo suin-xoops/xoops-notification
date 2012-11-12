@@ -118,6 +118,16 @@ class Notification
 	}
 
 	/**
+	 * Determine if this notification is sent to the user
+	 * @param User $user
+	 * @return bool
+	 */
+	public function isSentTo(User $user)
+	{
+		return ( $this->to === $user );
+	}
+
+	/**
 	 * Set message
 	 * @param string $message
 	 * @return Notification

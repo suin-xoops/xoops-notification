@@ -41,14 +41,14 @@ class DependencyInjectionContainer
 	 * Return notification repository
 	 * @return NotificationRepository
 	 */
-	private static function getNotificationRepository()
+	public static function getNotificationRepository()
 	{
 		$notificationRepository = new NotificationRepository();
 		$notificationRepository
 			->setUserRepository(self::getUserRepository())
 			->setModuleRepository(self::getModuleRepository())
 			->setDatabase(self::getDatabase())
-			->setPrefix(self::getDatabase()->prefix().'_');
+			->setPrefix(self::getDatabase()->prefix('notification').'_');
 		return $notificationRepository;
 	}
 

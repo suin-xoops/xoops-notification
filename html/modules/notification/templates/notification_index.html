@@ -1,0 +1,31 @@
+<{strip}>
+<h1>Notifications</h1>
+
+<table class="outer">
+	<{foreach item="notification" from=$notifications}>
+		<{assign var="created" value=$notification->getCreated()}>
+		<tr class=<{cycle values="odd,even"}>>
+			<td>
+				<a href="read.php?id=<{$notification->getId()}>">
+					<{if $notification->hasBeenRead()}>
+						<span>(read)</span>
+					<{else}>
+						<span>(unread)</span>
+					<{/if}>
+					<{$notification->getMessage()|escape}>
+				</a>
+			</td>
+			<td>
+				<{$created->format('r')|escape}>
+			</td>
+		</tr>
+	<{foreachelse}>
+		<tr class="odd">
+			<td>No notifications</td>
+		</tr>
+	<{/foreach}>
+</table>
+
+<div class="pagenavi"><{xoops_pagenavi pagenavi=$pager}></div>
+
+<{/strip}>
